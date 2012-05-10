@@ -3,6 +3,7 @@ use strict;
 use warnings;
 use autodie;
 use File::Basename qw( basename );
+use POSIX qw( strftime );
 
 binmode(STDOUT,":utf8");
 $|=1;
@@ -29,6 +30,8 @@ sub html_escape {
     return $text;
 }
 
+my $now = strftime("%a, %d %b %Y %H:%m:%S %z",gmtime());
+
 my $last = sqx qw( git log --max-count=1 --format=%aD ), @ARGV;
 
 my $name = basename( sqx qw( git rev-parse --show-toplevel ) );
@@ -46,6 +49,7 @@ print << "EORSS";
   <title>Git commits for $name</title>
   <docs>http://blogs.law.harvard.edu/tech/rss</docs>
   <pubDate>$last</pubDate>
+  <lastBuildDate>$now</lastBuildDate>
   <ttl>60</ttl>
 EORSS
 
