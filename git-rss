@@ -42,6 +42,12 @@ foreach (@remotes) {
     my($name,$location,$kind) = /^([^\t]+)\t(.+?) \((\w+)\)/;
     $remotes{$name}{$kind} = $location;
 }
+
+my($branch) = sqx( qw( git symbolic-ref HEAD ) ) =~ m{([^/]+)$};
+if ( $branch ) {
+    $name .= " [$branch]";
+}
+
 print << "EORSS";
 <?xml version="1.0" encoding="utf-8"?>
 <rss version="2.0">
