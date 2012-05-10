@@ -1,0 +1,65 @@
+#!/usr/bin/env perl
+use strict;
+use warnings;
+use autodie;
+use File::Basename qw( basename );
+
+binmode(STDOUT,":utf8");
+$|=1;
+
+sub oexec(@) {
+    open( my $command, '-|' ) or do { close STDERR; exec @_ };
+    binmode($command,":utf8");
+    return $command;
+}
+
+sub sqx(@) {
+    my $command = oexec @_;
+    local $/ = undef;
+    my $result = scalar <$command>;
+    $result =~ s/^\s+|\s+$//g;
+    return $result;
+}
+
+sub html_escape {
+    my($text) = @_;
+    $text =~ s/&/&amp;/g;
+    $text =~ s/</&lt;/g;
+    $text =~ s/>/&gt;/g;
+    return $text;
+}
+
+my $last = sqx qw( git log --max-count=1 --format=%aD ), @ARGV;
+
+my $name = basename( sqx qw( git rev-parse --show-toplevel ) );
+
+my @remotes = split /\n/, sqx qw( git remote -v );
+my %remotes;
+foreach (@remotes) {
+    my($name,$location,$kind) = /^([^\t]+)\t(.+?) \((\w+)\)/;
+    $remotes{$name}{$kind} = $location;
+}
+print << "EORSS";
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0">
+ <channel>
+  <title>Git commits for $name</title>
+  <docs>http://blogs.law.harvard.edu/tech/rss</docs>
+  <pubDate>$last</pubDate>
+  <ttl>60</ttl>
+EORSS
+
+if ( exists $remotes{'origin'}{'fetch'} ) {
+    print "  <link>".html_escape($remotes{'origin'}{'fetch'})."</link>\n";
+}
+
+my $items = oexec qw( git rss-items ), @ARGV;
+while (<$items>) {
+    print "  $_";
+}
+close $items;
+
+print << 'EORSS'
+ </channel>
+</rss>
+EORSS
